@@ -2,7 +2,7 @@ import socket
 
 soquete_servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-soquete_servidor.bind((socket.gethostname(), 80))
+soquete_servidor.bind(('localhost', 80))
 
 soquete_servidor.listen(5)
 print("Servidor local rodando na porta 80")
