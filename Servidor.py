@@ -2,15 +2,23 @@ import socket
 
 soquete_servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-soquete_servidor.bind(('localhost', 80))
+soquete_servidor.bind(('localhost', 1024))
 
 soquete_servidor.listen(5)
-print("Servidor local rodando na porta 80")
+print("Servidor local rodando na porta 1024")
 
 while True:
     cliente, endereco = soquete_servidor.accept()
     print(f"Conexão estabelecida com {endereco}")
-    cliente.send(b"Bem-vindo ao servidor!\n")
+
+    dados_cliente = cliente.recv(1024).decode()
+    modo_operacao, tamanho_mensagem = dados_cliente.split(',')
+    print(f"Modo de operação recebido: {modo_operacao}")
+    print(f"Tamanho da mensagem recebido: {tamanho_mensagem}")
+
+    cliente.send(b"Configuracao recebida com sucesso!\n")
+
+    
     requisicao = cliente.recv(1024).decode()
     print("Requisição recebida:\n", requisicao)
 
