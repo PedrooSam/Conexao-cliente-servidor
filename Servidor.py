@@ -16,7 +16,7 @@ while True:
     print(f"Modo de operação recebido: {modo_operacao}")
     print(f"Tamanho da mensagem recebido: {tamanho_mensagem}")
 
-    cliente.send(b"Configuracao recebida com sucesso!\n")
+    cliente.send(b"Mensagem recebida com sucesso!\n")
 
     
     requisicao = cliente.recv(1024).decode()

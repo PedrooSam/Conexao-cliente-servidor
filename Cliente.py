@@ -2,7 +2,7 @@ import socket
 
 def solicitarTamanho():
     while True:
-        mensagem = input("Informe o tamanho da mensagem (tem que ter no maximo 3 caracteres): ")
+        mensagem = input("Digite a mensagem (tem que ter no maximo 3 caracteres): ")
         if len(mensagem)<=3:
             return mensagem
         else:
@@ -10,9 +10,11 @@ def solicitarTamanho():
 
 def modoOperacao():
     while True:
-        modo = input("Informe o modo de operação (go-back-n ou repeticao seletiva): ").lower()
-        if modo in ["go-back-n", "repeticao seletiva"]:
-            return modo
+        selecao = int(input("Informe o modo de operação (go-back-n[1] ou repeticao seletiva[2]): "))
+        if selecao == 1:
+            return "go-back-n"
+        elif selecao == 2:
+            return "repeticao seletiva"
         else:
             print("Tente novamente")
             
