@@ -1,9 +1,14 @@
 import socket
+import hashlib
+import time
+
+def calcular_checksum(dados):
+    return hashlib.md5(dados.encode()).hexdigest()
 
 def solicitarTamanho():
     while True:
-        mensagem = input("Digite a mensagem (tem que ter no maximo 3 caracteres): ")
-        if len(mensagem)<=3:
+        mensagem = input("Digite a mensagem (tem que ter no máximo 3 caracteres): ")
+        if len(mensagem) <= 3:
             return mensagem
         else:
             print("Tente novamente")
@@ -17,9 +22,50 @@ def modoOperacao():
             return "repeticao seletiva"
         else:
             print("Tente novamente")
-            
-soquete_cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
+def esperar_resposta(soquete_cliente, timeout=5):
+    soquete_cliente.settimeout(timeout)
+    try:
+        resposta = soquete_cliente.recv(512)
+        return resposta
+    except socket.timeout:
+        print("Tempo excedido, retransmitindo...")
+        return None
+
+numero_sequencial = 0
+
+def incrementar_numero_sequencial():
+    global numero_sequencial
+    numero_sequencial += 1
+    return numero_sequencial
+
+def dividir_em_pacotes(mensagem, tamanho_pacote):
+    pacotes = []
+    for i in range(0, len(mensagem), tamanho_pacote):
+        pacote = mensagem[i:i+tamanho_pacote]
+        pacotes.append(pacote)
+    return pacotes
+
+def enviar_com_janela(soquete_cliente, pacotes, janela_tamanho):
+    enviados = 0
+    acknowledgments = 0
+    while enviados < len(pacotes):
+        while enviados - acknowledgments < janela_tamanho and enviados < len(pacotes):
+            pacote = pacotes[enviados]
+            checksum = calcular_checksum(pacote)
+            pacote_completo = f"{pacote},{checksum}"
+            soquete_cliente.sendall(pacote_completo.encode())
+            print(f"Enviando pacote {enviados + 1}")
+            enviados += 1
+        
+        resposta = esperar_resposta(soquete_cliente)
+        if resposta == b"ACK":
+            print("ACK recebido, movendo a janela.")
+            acknowledgments += 1
+        else:
+            print("Erro ou timeout, retransmitindo pacotes.")
+
+soquete_cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 endereco_servidor = ("localhost", 1024)
 soquete_cliente.connect(endereco_servidor)
 
@@ -27,20 +73,25 @@ modo_operacao = modoOperacao()
 tamanho_mensagem = solicitarTamanho()
 
 dados_para_servidor = f"{modo_operacao},{tamanho_mensagem}"
-soquete_cliente.sendall(dados_para_servidor.encode())
+checksum = calcular_checksum(dados_para_servidor)
+dados_para_servidor_completo = f"{dados_para_servidor}, {checksum}"
+soquete_cliente.sendall(dados_para_servidor_completo.encode())
 
-resposta_servidor = soquete_cliente.recv(512)
-print(f"Resposta do servidor: {resposta_servidor.decode()}")
+resposta_servidor = esperar_resposta(soquete_cliente)
+
+if resposta_servidor:
+    print(f"Resposta do servidor: {resposta_servidor.decode()}")
+else:
+    print("Não houve resposta recebida, tente novamente")
 
 requisicao = "GET / HTTP/1.0\r\nHost: localhost\r\n\r\n"
-soquete_cliente.sendall(requisicao.encode())
+checksum_requisicao = calcular_checksum(requisicao)
+requisicao_completo = f"{requisicao}, {checksum_requisicao}"
 
-while True: 
-    dados = soquete_cliente.recv(512)
-    
-    if len(dados) < 1:
-        break
+pacotes = dividir_em_pacotes(requisicao_completo, 3)
 
-    print(dados.decode(), end="")
+janela_tamanho = 3
+
+enviar_com_janela(soquete_cliente, pacotes, janela_tamanho)
 
 soquete_cliente.close()
