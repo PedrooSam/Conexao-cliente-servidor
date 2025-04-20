@@ -1,7 +1,6 @@
-def solicitar_Tamanho():
-    while True:
-        mensagem = input("Digite a mensagem (tem que ter no maximo 3 caracteres): ")
-        return mensagem
+def solicitar_mensagem():
+    mensagem = input("Digite a mensagem: ")
+    return mensagem
 
 def soliticar_modoOperacao():
     while True:

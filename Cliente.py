@@ -1,4 +1,5 @@
 import socket
+from time import sleep
 import Client_lib
             
 
@@ -11,23 +12,28 @@ soquete_cliente.connect(endereco_servidor)
 
 #Solicita informações do cliente
 modo_operacao = Client_lib.soliticar_modoOperacao()
-mensagem = Client_lib.solicitar_Tamanho()
+mensagem = Client_lib.solicitar_mensagem()
 
-#Divide a mensagem em pacotes
+#Divide a mensagem em pacotes e adiciona flag de rajada
 pacotes = Client_lib.dividir_pacotes(mensagem)
 rajada = False
-if len(pacotes > 1):
+if len(pacotes) > 1:
     rajada = True
 
+#Envia especificações para o servidor
+dados_para_servidor = f"{modo_operacao},{rajada}"
+soquete_cliente.sendall(dados_para_servidor.encode())
+
+#Obtém a resposta do servidor
+resposta_servidor = soquete_cliente.recv(512)
+print(f"Resposta do servidor: {resposta_servidor.decode()}")
+
 for pacote in pacotes:
-    
-    #Envia mensagem
-    dados_para_servidor = f"{modo_operacao},{rajada}"
-    soquete_cliente.sendall(dados_para_servidor.encode())
 
-    resposta_servidor = soquete_cliente.recv(512)
-    print(f"Resposta do servidor: {resposta_servidor.decode()}")
+    #Abre a conexão com o servidor
+    soquete_cliente.connect(endereco_servidor)
 
+    #Envia a requisição para o servidor
     requisicao = "GET / HTTP/1.0\r\nHost: localhost\r\n\r\n"
     soquete_cliente.sendall(requisicao.encode())
 
@@ -39,4 +45,4 @@ for pacote in pacotes:
 
         print(dados.decode(), end="")
 
-soquete_cliente.close()
+    soquete_cliente.close()
