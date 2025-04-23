@@ -18,6 +18,7 @@ dados_cliente = cliente.recv(1024).decode()
 modo_operacao, rajada = dados_cliente.split(',')
 print(f"Modo de operação recebido: {modo_operacao}")
 print(f"Rajada: {rajada}")
+print("\n")
 
 #Envia confirmação das configurações para o cliente
 cliente.send(b"Configuracoes recebidas com sucesso!\n")
@@ -28,7 +29,7 @@ while True:
 
     #Recebe os pacotes do cliente
     pacote = cliente.recv(1024).decode()
-    print("Pacote recebido:\n", pacote)
+    print("Pacote recebido: ", pacote)
 
     pacotes_recebidos.append(pacote)
 

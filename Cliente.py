@@ -34,14 +34,17 @@ for pacote in pacotes:
 
     #Envia a requisição para o servidor
     soquete_cliente.sendall(pacote.encode())
+    print("Pacote enviado: ", pacote)
 
-    while True:
-        dados = soquete_cliente.recv(512)
-        
-        if len(dados) < 1:
-            break
+    #Recebe resposta do seridor para cada pacote enviado no modo repetição seletiva
+    if modo_operacao == 'repeticao seletiva':
+        resposta = soquete_cliente.recv(512).decode()
+        print("Resposta do servidor: ", resposta)
 
-        print(dados.decode(), end="")
+#Recebe uma única resposta do seridor no modo go back n
+if modo_operacao == 'go-back-n':
+    resposta = soquete_cliente.recv(512).decode()
+    print("Resposta do servidor: ", resposta)
 
 #Fecha a conexão com o servidor
 soquete_cliente.close()
