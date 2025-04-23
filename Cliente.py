@@ -3,7 +3,7 @@ from time import sleep
 import Client_lib
             
 
-# ==================== MAIN ==================== #
+# ==================== CLIENTE ==================== #
 
 #Criando conexão com servidor
 soquete_cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -16,6 +16,8 @@ mensagem = Client_lib.solicitar_mensagem()
 
 #Divide a mensagem em pacotes e adiciona flag de rajada
 pacotes = Client_lib.dividir_pacotes(mensagem)
+
+#Adiciona flag de rajada
 rajada = False
 if len(pacotes) > 1:
     rajada = True
@@ -30,12 +32,8 @@ print(f"Resposta do servidor: {resposta_servidor.decode()}")
 
 for pacote in pacotes:
 
-    #Abre a conexão com o servidor
-    soquete_cliente.connect(endereco_servidor)
-
     #Envia a requisição para o servidor
-    requisicao = "GET / HTTP/1.0\r\nHost: localhost\r\n\r\n"
-    soquete_cliente.sendall(requisicao.encode())
+    soquete_cliente.sendall(pacote.encode())
 
     while True:
         dados = soquete_cliente.recv(512)
@@ -45,4 +43,5 @@ for pacote in pacotes:
 
         print(dados.decode(), end="")
 
-    soquete_cliente.close()
+#Fecha a conexão com o servidor
+soquete_cliente.close()
