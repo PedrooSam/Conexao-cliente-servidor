@@ -1,5 +1,7 @@
 import socket
 
+def calcular_checksum(pacote):
+    return sum(pacote.encode()) % 256
 
 # ==================== SERVIDOR ==================== #
 
@@ -26,31 +28,41 @@ cliente.send(b"Configuracoes recebidas com sucesso!\n")
 pacotes_recebidos = []
 
 while True:
-
-    #Recebe os pacotes do cliente
+    #Recebe o pacote do cliente
     pacote = cliente.recv(1024).decode()
     print("Pacote recebido: ", pacote)
 
-    pacotes_recebidos.append(pacote)
-
-    #Envia um ACK para cada pacote caso seja repetição seletiva
-    if modo_operacao == 'repeticao seletiva':
-        resposta = "ACK"
-        cliente.sendall(resposta.encode())
-
-    #Break caso chegue no fim da mensagem
+    #Verifica se é o fim da mensagem
     if pacote == '$$$':
         break
 
+    #Tenta separar os dados e o checksum
+    try:
+        dados, checksum_recebido = pacote.split(":")
+        checksum_calculado = calcular_checksum(dados)
+    except ValueError:
+        print("Formato inválido de pacote.")
+        continue
 
-#Junta os pacotes recebidos em uma mensagem
+    #Verifica se o checksum bate
+    if checksum_calculado != int(checksum_recebido):
+        print("Pacote corrompido! Ignorado.")
+        continue
+    else:
+        print("Nada de errado com o pacote!")
+        pacotes_recebidos.append(dados)
+
+    #Envia ACK se for modo de repetição seletiva
+    if modo_operacao == 'repeticao seletiva':
+        cliente.sendall(b"ACK")
+
+#Junta os pacotes válidos recebidos
 mensagem = "".join(pacotes_recebidos)
-print(mensagem)
+print("Mensagem final reconstruída:", mensagem)
 
-#Envia apenas um ACK para o cliente caso seja go back n
+#Envia um ACK final se for go-back-n
 if modo_operacao == "go-back-n":
-    resposta = "ACK"
-    cliente.sendall(resposta.encode())
+    cliente.sendall(b"ACK")
 
 # Fecha a conexão com o cliente
 cliente.close()
