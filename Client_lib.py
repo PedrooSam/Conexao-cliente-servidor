@@ -17,16 +17,32 @@ def calcular_checksum(pacote):
 
 
 def dividir_pacotes(mensagem):
-    pacotes = []
     tamanho_pacote = 3
+
+    num_sequencia = 0
+
+    pacotes = []
+
+    pacote = {}
 
     #Divide a mensagem em uma lista de 3 em 3 caracteres
     for i in range(0, len(mensagem), tamanho_pacote):
         dados = mensagem[i:i+tamanho_pacote]
         checksum = calcular_checksum(dados)
-        pacotes.append(f"{dados}:{checksum}")
+        #pacotes.append(f"{num_sequencia}:{dados}:{checksum}")
+
+        pacote["num_sequencia"] = num_sequencia
+        pacote["dados"] = dados
+        pacote["checksum"] = checksum
+
+        num_sequencia += 1
+
+        pacotes.append(pacote)
+
+        pacote = {}
+
     
     #Adiciona uma verificação que representa o fim dos pacotes
-    pacotes.append('$$$')
+    pacotes.append({"num_sequencia": num_sequencia, "dados": "$$$", "checksum": 0})
 
     return pacotes

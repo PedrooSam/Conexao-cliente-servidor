@@ -1,7 +1,6 @@
 import socket
-
-def calcular_checksum(pacote):
-    return sum(pacote.encode()) % 256
+from Client_lib import calcular_checksum
+import json
 
 # ==================== SERVIDOR ==================== #
 
@@ -17,7 +16,14 @@ print(f"Conexão estabelecida com {endereco}")
 
 #Recebe configurações iniciais do cliente
 dados_cliente = cliente.recv(1024).decode()
-modo_operacao, rajada = dados_cliente.split(',')
+
+try:
+    modo_operacao, rajada = dados_cliente.split(',')
+except ValueError:
+    print("Erro ao processar dados iniciais.")
+    cliente.close()
+    exit()
+
 print(f"Modo de operação recebido: {modo_operacao}")
 print(f"Rajada: {rajada}")
 print("\n")
@@ -26,19 +32,24 @@ print("\n")
 cliente.send(b"Configuracoes recebidas com sucesso!\n")
 
 pacotes_recebidos = []
+num_sequencia_anterior = -1
 
 while True:
     #Recebe o pacote do cliente
     pacote = cliente.recv(1024).decode()
-    print("Pacote recebido: ", pacote)
+
+    print("Pacote recebido:", pacote)
+
+    # Transforma o pacote recebido em um dicionário
+    pacote = json.loads(pacote)
 
     #Verifica se é o fim da mensagem
-    if pacote == '$$$':
+    if pacote["dados"] == '$$$':
         break
-
-    #Tenta separar os dados e o checksum
+    
     try:
-        dados, checksum_recebido = pacote.split(":")
+        num_sequencia, dados, checksum_recebido = pacote["num_sequencia"], pacote["dados"], pacote["checksum"]
+        num_sequencia = int(num_sequencia)
         checksum_calculado = calcular_checksum(dados)
     except ValueError:
         print("Formato inválido de pacote.")
@@ -48,6 +59,29 @@ while True:
     if checksum_calculado != int(checksum_recebido):
         print("Pacote corrompido! Ignorado.")
         continue
+
+    # Verifica se o pacote está fora de ordem
+    if num_sequencia != num_sequencia_anterior + 1:
+        print("Pacote fora de ordem!")
+        if modo_operacao == 'go-back-n':
+            print("Reenviando pacotes...")
+            cliente.sendall(b"ACK")
+            break
+        else:
+            print("Modo de operação: repetição seletiva. Pacote ignorado.")
+            continue
+    
+    # Verifica se o pacote é duplicado
+    if(num_sequencia == num_sequencia_anterior):
+        print("Pacote duplicado!")
+        if modo_operacao == 'go-back-n':
+            print("Reenviando pacotes...")
+            cliente.sendall(b"ACK")
+            break
+        else:
+            print("Modo de operação: repetição seletiva. Pacote ignorado.")
+            continue
+
     else:
         print("Nada de errado com o pacote!")
         pacotes_recebidos.append(dados)
@@ -55,6 +89,10 @@ while True:
     #Envia ACK se for modo de repetição seletiva
     if modo_operacao == 'repeticao seletiva':
         cliente.sendall(b"ACK")
+
+    num_sequencia_anterior = num_sequencia
+
+    cliente.sendall(b"")
 
 #Junta os pacotes válidos recebidos
 mensagem = "".join(pacotes_recebidos)
