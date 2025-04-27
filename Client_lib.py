@@ -23,23 +23,23 @@ def dividir_pacotes(mensagem):
 
     pacotes = []
 
-    pacote = {}
-
     #Divide a mensagem em uma lista de 3 em 3 caracteres
     for i in range(0, len(mensagem), tamanho_pacote):
+
+        pacote = {}
+
         dados = mensagem[i:i+tamanho_pacote]
         checksum = calcular_checksum(dados)
-        #pacotes.append(f"{num_sequencia}:{dados}:{checksum}")
 
+        #Adiciona as informações do pacote em uma dicionário
         pacote["num_sequencia"] = num_sequencia
         pacote["dados"] = dados
         pacote["checksum"] = checksum
 
+        #Soma o numero de sequencia do pacote (contador)
         num_sequencia += 1
 
         pacotes.append(pacote)
-
-        pacote = {}
 
     
     #Adiciona uma verificação que representa o fim dos pacotes
