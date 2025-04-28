@@ -44,17 +44,24 @@ while base < len(pacotes):
         print(f"Enviando pacote: {pacote_json}")
         soquete_cliente.sendall(pacote_json.encode())
         next_seq_num += 1
-
+    if base >= len(pacotes):
+        break
     # Espera resposta do servidor
     try:
         soquete_cliente.settimeout(3.0)  # Define timeout para esperar a resposta
         resposta = soquete_cliente.recv(512).decode()
         print("Resposta do servidor:", resposta)
 
+        if not resposta:
+            print("Servidor fechou a conexão. Finalizando cliente...")
+            break
+
         # Caso seja Go-Back-N, ajusta a base conforme o ACK
         if modo_operacao == 'go-back-n':
-            if resposta == "ACK":
-                base = next_seq_num  # Atualiza base após ACK
+            if "ACK" in resposta:
+                qtd_acks = resposta.count("ACK")
+                base += qtd_acks  # Avança base conforme quantidade de ACKs
+                print(f"ACKs recebidos: {qtd_acks}. Nova base: {base}")
             else:
                 print("Erro detectado, voltando janela...")
                 next_seq_num = base  # Reenvia a partir da base
@@ -66,10 +73,6 @@ while base < len(pacotes):
         print("Timeout: reenviando janela a partir do base...")
         next_seq_num = base  # Reenvia a partir da base
 
-# Envia pacote especial de finalização para indicar fim da mensagem
-pacote_final = {"num_sequencia": next_seq_num, "dados": "$$$", "checksum": 0}
-pacote_final_json = json.dumps(pacote_final)
-soquete_cliente.sendall(pacote_final_json.encode())
 
 # Fecha a conexão com o servidor
 soquete_cliente.close()
