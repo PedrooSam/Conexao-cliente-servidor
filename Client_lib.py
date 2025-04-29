@@ -1,3 +1,5 @@
+import socket
+
 def solicitar_mensagem():
     mensagem = input("Digite a mensagem: ")
     return mensagem
@@ -46,3 +48,12 @@ def dividir_pacotes(mensagem):
     pacotes.append({"num_sequencia": num_sequencia, "dados": "$$$", "checksum": 0})
 
     return pacotes
+
+def receberRespostaServidor(soquete_cliente):
+    try: 
+        resposta_servidor = soquete_cliente.recv(512)
+        return resposta_servidor.decode()
+    except socket.timeout:
+        print("Tempo de espera excedido. O servidor não respondeu.")
+        soquete_cliente.close()
+        exit()
