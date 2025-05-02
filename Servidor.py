@@ -1,6 +1,7 @@
 import socket
-from Client_lib import calcular_checksum
+from Client_lib import calcular_checksum, enviarRespostaNegativaServidor
 import json
+from time import sleep
 
 # ==================== SERVIDOR ==================== #
 
@@ -12,8 +13,8 @@ print("Servidor local rodando na porta 1024")
 
 #Criação inicial da janela
 janela = {}
-janela['inicio'] = 0
-janela['final'] = 4
+janela["inicio"] = 0
+janela["final"] = 4
 
 #Aceita conexão com cliente
 cliente, endereco = soquete_servidor.accept()
@@ -30,7 +31,7 @@ while True:
 
     #Envia confirmação das configurações para o cliente
     cliente.send(b"Configuracoes recebidas com sucesso!\n")
-    cliente.send((str(janela)).encode())
+    cliente.send(json.dumps(janela).encode())
 
     pacotes_recebidos = []
     pacotes_rejeitados = []
@@ -40,15 +41,22 @@ while True:
         #Recebe o pacote do cliente
         pacote = cliente.recv(1024).decode()
 
+        if pacote == '':
+            enviarRespostaNegativaServidor(cliente, modo_operacao, "Pacote vazio", num_sequencia_anterior, janela)
+            break
+
         print("\nPacote recebido: ", pacote)
-        print("Janela: ", janela)
+
+        inicio = janela["inicio"]
+        final = janela["final"]
+        print(f"Janela: ({inicio}, {final})")
 
         # Transforma o pacote recebido em um dicionário
         pacote = json.loads(pacote)
         
 
         #Calcula intervalo da janela
-        intervalo_janela = range(janela["inicio"], janela['final'])
+        intervalo_janela = range(janela["inicio"], janela["final"])
 
         try:
             num_sequencia, dados, checksum_recebido = pacote["num_sequencia"], pacote["dados"], pacote["checksum"]
@@ -71,80 +79,37 @@ while True:
                 continue
 
         
-            
-
         #Verifica se o pacote está no limite da janela
         if num_sequencia not in intervalo_janela:
-            retorno = "Pacote fora do intervalo da janela | NACK " + num_sequencia
-            print(retorno)
-
-            #incrementa as informações da janela e retorna para o cliente
-            janela['inicio'] += 1
-            janela["final"] += 1
-            retorno_janela = (str(janela)) + '\n'
-
-            #Retorna o erro caso seja repetição seletiva
-            if modo_operacao == 'repeticao seletiva':
-                cliente.send(retorno.encode())
-                cliente.send(retorno_janela.encode())
-
-
-            #Ignora o pacote fora do limite
+            enviarRespostaNegativaServidor(cliente, modo_operacao, "Pacote fora da janela", num_sequencia, janela)
             continue
 
         #Verifica se o checksum bate
         if checksum_calculado != int(checksum_recebido):
-            print("Pacote corrompido! Ignorado.")
-            retorno = "Pacote corrompido! Ignorado. | NACK " + num_sequencia
-            print(retorno)
-
-            janela['inicio'] += 1
-            janela["final"] += 1
-            retorno_janela = (str(janela)) + '\n'
-
-            if modo_operacao == 'repeticao seletiva':
-                cliente.send(retorno.encode())
-                cliente.send(retorno_janela.encode())
-
+            enviarRespostaNegativaServidor(cliente, modo_operacao, "Checksum inválido", num_sequencia, janela)
             continue
         
         # Verifica se o pacote é duplicado
         if(num_sequencia == num_sequencia_anterior):
-            print("Pacote duplicado!")
-            retorno = "Pacote duplicado! | NACK " + num_sequencia
-            print(retorno)
-            
-            janela['inicio'] += 1
-            janela["final"] += 1
-            retorno_janela = (str(janela)) + '\n'
-
-            if modo_operacao == 'repeticao seletiva':
-                cliente.send(retorno.encode())
-                cliente.send(retorno_janela.encode())
-            
+            enviarRespostaNegativaServidor(cliente, modo_operacao, "Pacote duplicado", num_sequencia, janela)
             continue
 
         else:
             print("Nada de errado com o pacote!")
             pacotes_recebidos.append(dados)
 
-            janela['inicio'] += 1
+            janela["inicio"] += 1
             janela["final"] += 1
-            retorno_janela = (str(janela)) + '\n'
             
-        #Envia ACK se for modo de repetição seletiva
         if modo_operacao == 'repeticao seletiva':
             cliente.sendall(b"ACK" + str(num_sequencia).encode())
 
             #incrementa as informações da janela e retorna para o cliente
-            janela['inicio'] += 1
+            janela["inicio"] += 1
             janela["final"] += 1
-            cliente.send((str(janela)).encode())
+            cliente.send(json.dumps(janela).encode())
 
         num_sequencia_anterior = num_sequencia
-
-        
-
 
     #Junta os pacotes válidos recebidos
     mensagem = "".join(pacotes_recebidos)
@@ -155,13 +120,16 @@ while True:
         cliente.sendall(b"ACK" + str(num_sequencia_anterior).encode())
         
         #incrementa as informações da janela e retorna para o cliente
-        janela['inicio'] += 1
+        janela["inicio"] += 1
         janela["final"] += 1
-        cliente.send((str(janela)).encode())
+
+        sleep(0.2)
+
+        cliente.send(json.dumps(janela).encode())
 
     janela = {}
-    janela['inicio'] = 0
-    janela['final'] = 4
+    janela["inicio"] = 0
+    janela["final"] = 4
 
 # Fecha a conexão com o cliente
 cliente.close()

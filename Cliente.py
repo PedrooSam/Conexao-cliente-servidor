@@ -21,6 +21,7 @@ while True:
         break
     
     while True:
+        print()
         print("Escolha uma opção:")
         print("1. Enviar pacotes sem erros")
         print("2. Simular erro de integridade")
@@ -30,7 +31,7 @@ while True:
         print("6. Enviar pacote com atraso proposital e sem ACK (testar timeout)")
         opcao = int(input("Digite o número da opção: "))
 
-        if opcao in  range (1, 7):
+        if opcao in range (1, 7):
             break
         else:
             print('Opção invalida!')
@@ -43,17 +44,9 @@ while True:
 
     pacotes = Client_lib.simularErro(pacotes, opcao)
 
-
-
-    
-    #Obtém as respostas do servidor
-    soquete_cliente.settimeout(5)  # Define um tempo limite de 5 segundos para a resposta do servidor 
-
     #Envia especificações para o servidor
     dados_para_servidor = f"{modo_operacao}"
     soquete_cliente.sendall(dados_para_servidor.encode())
-
-
 
     resposta = Client_lib.receberRespostaServidor(soquete_cliente)
     janela = Client_lib.receberRespostaServidor(soquete_cliente)
@@ -68,15 +61,6 @@ while True:
         pacote = json.dumps(pacote)
 
         #Envia a requisição para o servidor
-
-        if opcao == 6:
-            try:
-                soquete_cliente.settimeout(1)
-            except socket.timeout:
-                print('TimeOut Error')
-                soquete_cliente.settimeout(5)
-
-        
         soquete_cliente.sendall(pacote.encode())
 
         #Caso seja o fim da string, quebra o loop
@@ -85,29 +69,46 @@ while True:
 
         #Recebe resposta do seridor para cada pacote enviado no modo repetição seletiva
         if modo_operacao == 'repeticao seletiva':
-            resposta = Client_lib.receberRespostaServidor(soquete_cliente)
-            print('Resposta: ', resposta)
-            janela = json.dumps(Client_lib.receberRespostaServidor(soquete_cliente))
-            print("Janela: ", janela)
+            if opcao == 6:
+                soquete_cliente.settimeout(0.001)
+            
+
+            try:
+                resposta = Client_lib.receberRespostaServidor(soquete_cliente)
+                print('Resposta: ', resposta)
+
+                janela = json.loads(Client_lib.receberRespostaServidor(soquete_cliente))
+
+                inicio = janela["inicio"]
+                final = janela["final"]
+
+                print(f"Janela: ({inicio}, {final})")
+            except socket.timeout:
+                print("Tempo de espera excedido!")
+                break
             
         if modo_operacao == 'go-back-n':
-            # Aguarda um tempo para simular o envio de pacotes
-            sleep(0.1)
+            sleep(0.2)
 
 
     #Recebe uma única resposta do seridor no modo go back n
     if modo_operacao == 'go-back-n':
         if opcao == 6:
-            soquete_cliente.settimeout(1)
-            
+            soquete_cliente.settimeout(0.001)
+
         try:
             resposta = Client_lib.receberRespostaServidor(soquete_cliente)
             print('Resposta: ', resposta)
-            janela = json.dumps(Client_lib.receberRespostaServidor(soquete_cliente))
-            print("Janela: ", janela)
+
+            janela = json.loads(Client_lib.receberRespostaServidor(soquete_cliente))
+
+            inicio = janela["inicio"]
+            final = janela["final"]
+
+            print(f"Janela: ({inicio}, {final})")
         except socket.timeout:
-            print("TimeOut Error")
-            soquete_cliente.close()
+            print("Tempo de espera excedido!")
+            break
 
 #Fecha a conexão com o servidor
 soquete_cliente.close()

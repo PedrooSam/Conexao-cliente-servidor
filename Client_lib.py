@@ -1,12 +1,18 @@
-import socket
+import json
 
 def solicitar_mensagem():
+    print()
     mensagem = input("Digite a mensagem: ")
     return mensagem
 
 def soliticar_modoOperacao():
     while True:
-        selecao = int(input("Informe o modo de operação (go-back-n[1], repeticao seletiva[2] ou fechar aplicação[0]): "))
+        print()
+        print("Selecione o modo de operação:")
+        print("1. Go-Back-N")
+        print("2. Repetição Seletiva")
+        print("0. Fechar aplicação")
+        selecao = int(input("Selecione uma opção: "))
         if selecao == 1:
             return "go-back-n"
         elif selecao == 2:
@@ -52,13 +58,19 @@ def dividir_pacotes(mensagem):
     return pacotes
 
 def receberRespostaServidor(soquete_cliente):
-    try: 
-        resposta_servidor = soquete_cliente.recv(512)
-        return resposta_servidor.decode()
-    except socket.timeout:
-        print("Tempo de espera excedido. O servidor não respondeu.")
-        soquete_cliente.close()
-        exit()
+    resposta_servidor = soquete_cliente.recv(512)
+    return resposta_servidor.decode()
+
+def enviarRespostaNegativaServidor(soquete_cliente, modo, resposta, num_sequencia, janela):
+    retorno = f"{resposta} | NACK{num_sequencia}"
+    print(retorno)
+
+    janela["inicio"] += 1
+    janela["final"] += 1
+
+    if modo == 'repeticao seletiva':
+        soquete_cliente.send(retorno.encode())
+        soquete_cliente.send(json.dumps(janela).encode())
 
 def simularErro(pacotes, opcao):
     if opcao == 1:
