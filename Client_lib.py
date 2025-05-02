@@ -6,11 +6,13 @@ def solicitar_mensagem():
 
 def soliticar_modoOperacao():
     while True:
-        selecao = int(input("Informe o modo de operação (go-back-n[1] ou repeticao seletiva[2]): "))
+        selecao = int(input("Informe o modo de operação (go-back-n[1], repeticao seletiva[2] ou fechar aplicação[0]): "))
         if selecao == 1:
             return "go-back-n"
         elif selecao == 2:
             return "repeticao seletiva"
+        elif selecao == 0:
+            return "close"
         else:
             print("Tente novamente")
 
@@ -57,3 +59,34 @@ def receberRespostaServidor(soquete_cliente):
         print("Tempo de espera excedido. O servidor não respondeu.")
         soquete_cliente.close()
         exit()
+
+def simularErro(pacotes, opcao):
+    if opcao == 1:
+        return pacotes
+    elif opcao == 2:
+        pacote = pacotes[0]
+        pacote = {'num_sequencia': pacote["num_sequencia"], "dados": pacote["dados"], "checksum": -1}
+
+        return pacotes
+    elif opcao == 3:
+        pacote = pacotes[0]
+        pacote["num_sequencia"] = 5
+
+        return pacotes
+    elif opcao == 4:
+        pacote = pacotes[0]
+
+        pacote["flag"] = "flag_no_ACK"
+
+        return pacotes
+    elif opcao == 5:
+        pacote = pacotes[0]
+
+        pacote["flag"] = "flag_ignore"
+
+        return pacotes
+    elif opcao == 6:
+        return pacotes
+
+
+        
