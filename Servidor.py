@@ -1,7 +1,7 @@
 import socket
-from Client_lib import calcular_checksum, enviarRespostaNegativaServidor
+from Client_lib import calcular_checksum, enviarRespostaNegativaServidor, enviarRespostaFinalServidor
 import json
-from time import sleep
+import time
 
 # ==================== SERVIDOR ==================== #
 
@@ -21,7 +21,7 @@ cliente, endereco = soquete_servidor.accept()
 print(f"Conexão estabelecida com {endereco}")
 
 while True:
-    #Recebe configurações iniciais do cliente
+    #Recebe configurações iniciais do client
     modo_operacao = cliente.recv(1024).decode()
 
     if modo_operacao == 'close':
@@ -30,12 +30,13 @@ while True:
     print(f"Modo de operação recebido: {modo_operacao}\n")
 
     #Envia confirmação das configurações para o cliente
-    cliente.send(b"Configuracoes recebidas com sucesso!\n")
     cliente.send(json.dumps(janela).encode())
 
     pacotes_recebidos = []
-    pacotes_rejeitados = []
     num_sequencia_anterior = -1
+
+    nack = 0
+    timeout = 0
 
     while True:
         #Recebe o pacote do cliente
@@ -54,7 +55,6 @@ while True:
         # Transforma o pacote recebido em um dicionário
         pacote = json.loads(pacote)
         
-
         #Calcula intervalo da janela
         intervalo_janela = range(janela["inicio"], janela["final"])
 
@@ -63,7 +63,8 @@ while True:
             num_sequencia = int(num_sequencia)
             checksum_calculado = calcular_checksum(dados)
         except ValueError:
-            print("Formato inválido de pacote.")
+            nack = 1
+            enviarRespostaNegativaServidor(cliente, modo_operacao, "Pacote inválido", num_sequencia_anterior, janela)
             continue
 
         #Break caso seja o fim da mensagem
@@ -72,26 +73,43 @@ while True:
 
         if "flag" in pacote:
             if pacote["flag"] == "flag_no_ACK":
-                print("Recebido pacote sem enviar o ACK!")
+                nack = 1
+                print("Pacote recebido sem enviar o ACK!")
+                if modo_operacao == 'repeticao seletiva':        
+                    enviarRespostaNegativaServidor(cliente, modo_operacao, "Pacote recebido sem ACK", num_sequencia_anterior, janela)   
                 continue
             elif pacote["flag"] == "flag_ignore":
+                nack = 1
                 print ("* Pacote perdido *")
+                if modo_operacao == 'repeticao seletiva':                 
+                    enviarRespostaNegativaServidor(cliente, modo_operacao, "Pacote Perdido", num_sequencia_anterior, janela)                  
+                continue
+            elif pacote["flag"] == "flag_timeout":
+                timeout = 1
+                nack = 1
+                if modo_operacao == 'repeticao seletiva':
+                    time.sleep(6)
+                    enviarRespostaNegativaServidor(cliente, modo_operacao, "Timeout", num_sequencia_anterior, janela)
+                    timeout = 0
                 continue
 
         
         #Verifica se o pacote está no limite da janela
         if num_sequencia not in intervalo_janela:
             enviarRespostaNegativaServidor(cliente, modo_operacao, "Pacote fora da janela", num_sequencia, janela)
+            nack = 1
             continue
 
         #Verifica se o checksum bate
         if checksum_calculado != int(checksum_recebido):
             enviarRespostaNegativaServidor(cliente, modo_operacao, "Checksum inválido", num_sequencia, janela)
+            nack = 1
             continue
         
         # Verifica se o pacote é duplicado
         if(num_sequencia == num_sequencia_anterior):
             enviarRespostaNegativaServidor(cliente, modo_operacao, "Pacote duplicado", num_sequencia, janela)
+            nack = 1
             continue
 
         else:
@@ -102,12 +120,8 @@ while True:
             janela["final"] += 1
             
         if modo_operacao == 'repeticao seletiva':
-            cliente.sendall(b"ACK" + str(num_sequencia).encode())
-
-            #incrementa as informações da janela e retorna para o cliente
-            janela["inicio"] += 1
-            janela["final"] += 1
-            cliente.send(json.dumps(janela).encode())
+            enviarRespostaFinalServidor(cliente, num_sequencia, janela, timeout, nack)
+            timeout = 0
 
         num_sequencia_anterior = num_sequencia
 
@@ -117,19 +131,14 @@ while True:
 
     #Envia um ACK (final para repetição seletiva ou único se for go-back-n)
     if modo_operacao == 'go-back-n':
-        cliente.sendall(b"ACK" + str(num_sequencia_anterior).encode())
-        
-        #incrementa as informações da janela e retorna para o cliente
-        janela["inicio"] += 1
-        janela["final"] += 1
-
-        sleep(0.2)
-
-        cliente.send(json.dumps(janela).encode())
+        enviarRespostaFinalServidor(cliente, num_sequencia, janela, timeout, nack)
 
     janela = {}
     janela["inicio"] = 0
     janela["final"] = 4
+    
+    nack = 0
+    timeout = 0
 
 # Fecha a conexão com o cliente
 cliente.close()

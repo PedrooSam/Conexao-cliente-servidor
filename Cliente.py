@@ -1,5 +1,5 @@
 import socket
-from time import sleep
+import time
 import Client_lib
 import json
             
@@ -48,20 +48,23 @@ while True:
     dados_para_servidor = f"{modo_operacao}"
     soquete_cliente.sendall(dados_para_servidor.encode())
 
-    resposta = Client_lib.receberRespostaServidor(soquete_cliente)
+    Client_lib.limpar_buffer(soquete_cliente)
+
     janela = Client_lib.receberRespostaServidor(soquete_cliente)
 
     #Percorre todos os pacotes da mensagem
     for pacote in pacotes:
-
-        print()
         fim_mensagem = pacote['dados']
 
         #transforma o pacote em json string para enviar
-        pacote = json.dumps(pacote)
+        pacote_json = json.dumps(pacote)
 
         #Envia a requisição para o servidor
-        soquete_cliente.sendall(pacote.encode())
+        soquete_cliente.send(pacote_json.encode())
+
+        if modo_operacao == 'repeticao seletiva' and 'flag' in pacote and pacote['flag'] == 'flag_timeout':
+            #Aguarda o tempo de timeout para simular o atraso
+            time.sleep(6)
 
         #Caso seja o fim da string, quebra o loop
         if fim_mensagem == '$$$':
@@ -69,46 +72,17 @@ while True:
 
         #Recebe resposta do seridor para cada pacote enviado no modo repetição seletiva
         if modo_operacao == 'repeticao seletiva':
-            if opcao == 6:
-                soquete_cliente.settimeout(0.001)
-            
-
-            try:
-                resposta = Client_lib.receberRespostaServidor(soquete_cliente)
-                print('Resposta: ', resposta)
-
-                janela = json.loads(Client_lib.receberRespostaServidor(soquete_cliente))
-
-                inicio = janela["inicio"]
-                final = janela["final"]
-
-                print(f"Janela: ({inicio}, {final})")
-            except socket.timeout:
-                print("Tempo de espera excedido!")
-                break
+            pacoteServidor = Client_lib.receberPacoteServidor(soquete_cliente, opcao)
+            if pacoteServidor == "break":
+                continue
             
         if modo_operacao == 'go-back-n':
-            sleep(0.2)
+            time.sleep(0.2)
 
 
     #Recebe uma única resposta do seridor no modo go back n
     if modo_operacao == 'go-back-n':
-        if opcao == 6:
-            soquete_cliente.settimeout(0.001)
-
-        try:
-            resposta = Client_lib.receberRespostaServidor(soquete_cliente)
-            print('Resposta: ', resposta)
-
-            janela = json.loads(Client_lib.receberRespostaServidor(soquete_cliente))
-
-            inicio = janela["inicio"]
-            final = janela["final"]
-
-            print(f"Janela: ({inicio}, {final})")
-        except socket.timeout:
-            print("Tempo de espera excedido!")
-            break
+        pacoteServidor = Client_lib.receberPacoteServidor(soquete_cliente, opcao)
 
 #Fecha a conexão com o servidor
 soquete_cliente.close()

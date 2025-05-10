@@ -1,4 +1,6 @@
 import json
+import time
+import socket
 
 def solicitar_mensagem():
     print()
@@ -61,8 +63,37 @@ def receberRespostaServidor(soquete_cliente):
     resposta_servidor = soquete_cliente.recv(512)
     return resposta_servidor.decode()
 
+def receberPacoteServidor(soquete_cliente, opcao):
+    if opcao == 6:
+        soquete_cliente.settimeout(5)
+    
+    try:
+        print()
+        start_time = time.time()
+        resposta = receberRespostaServidor(soquete_cliente)
+        print('Resposta: ', resposta)
+
+        janela = json.loads(receberRespostaServidor(soquete_cliente))
+
+        inicio = janela["inicio"]
+        final = janela["final"]
+
+        print(f"Janela: ({inicio}, {final})")
+
+        elapsed_time = time.time() - start_time
+        soquete_cliente.send(str(elapsed_time).encode())
+        print(f"Tempo de resposta: {elapsed_time:.2f} segundos")
+        time.sleep(0.2)
+    except socket.timeout:
+        timeout_time = time.time() - start_time
+        soquete_cliente.send(str(timeout_time).encode())
+        print("Tempo de espera excedido!")
+        print(f"Tempo de espera: {timeout_time:.2f} segundos")
+        time.sleep(1)
+        return "break"
+
 def enviarRespostaNegativaServidor(soquete_cliente, modo, resposta, num_sequencia, janela):
-    retorno = f"{resposta} | NACK{num_sequencia}"
+    retorno = f"{resposta} | NACK{num_sequencia + 1}"
     print(retorno)
 
     janela["inicio"] += 1
@@ -70,19 +101,48 @@ def enviarRespostaNegativaServidor(soquete_cliente, modo, resposta, num_sequenci
 
     if modo == 'repeticao seletiva':
         soquete_cliente.send(retorno.encode())
+
+        time.sleep(0.2)
+
         soquete_cliente.send(json.dumps(janela).encode())
+        elapsed_time = soquete_cliente.recv(1024).decode()
+        print(f"Tempo de resposta: {float(elapsed_time):.2f} segundos")
+
+def enviarRespostaFinalServidor(soquete_cliente, num_sequencia, janela, timeout, nack):
+    if timeout == 1:
+        time.sleep(6)
+    if nack == 0:
+        soquete_cliente.sendall(b"ACK" + str(num_sequencia).encode())
+    else:
+        soquete_cliente.sendall(b"NACK" + str(num_sequencia).encode())
+    
+    #incrementa as informações da janela e retorna para o cliente
+    janela["inicio"] += 1
+    janela["final"] += 1
+
+    time.sleep(0.2)
+
+    soquete_cliente.send(json.dumps(janela).encode())
+
+    elapsed_time = soquete_cliente.recv(1024).decode()
+    print(f"Tempo de resposta: {float(elapsed_time):.2f} segundos")
+
 
 def simularErro(pacotes, opcao):
     if opcao == 1:
         return pacotes
     elif opcao == 2:
         pacote = pacotes[0]
-        pacote = {'num_sequencia': pacote["num_sequencia"], "dados": pacote["dados"], "checksum": -1}
+        pacote["checksum"]  = -1
 
         return pacotes
     elif opcao == 3:
         pacote = pacotes[0]
-        pacote["num_sequencia"] = 5
+
+        print()
+        num_sequencia = int(input("Digite o número de sequência do pacote a ser perdido: "))
+
+        pacote["num_sequencia"] = num_sequencia
 
         return pacotes
     elif opcao == 4:
@@ -98,7 +158,19 @@ def simularErro(pacotes, opcao):
 
         return pacotes
     elif opcao == 6:
+        pacote = pacotes[0]
+
+        pacote["flag"] = "flag_timeout"
         return pacotes
 
-
-        
+def limpar_buffer(soquete):
+    soquete.setblocking(False)  
+    try:
+        while True:
+            dados = soquete.recv(1024)
+            if not dados:
+                break
+    except BlockingIOError:
+        pass
+    finally:
+        soquete.setblocking(True)  
