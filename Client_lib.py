@@ -28,8 +28,8 @@ def calcular_checksum(pacote):
     return sum(pacote.encode()) % 256
 
 
-def dividir_pacotes(mensagem):
-    tamanho_pacote = 3
+def dividir_pacotes(mensagem, tamanho_mensagem):
+    tamanho_pacote = tamanho_mensagem 
 
     num_sequencia = 0
 
@@ -55,7 +55,7 @@ def dividir_pacotes(mensagem):
 
     
     #Adiciona uma verificação que representa o fim dos pacotes
-    pacotes.append({"num_sequencia": num_sequencia, "dados": "$$$", "checksum": 0})
+    pacotes[-1]["flag"] = "$$$"
 
     return pacotes
 
@@ -93,11 +93,8 @@ def receberPacoteServidor(soquete_cliente, opcao):
         return "break"
 
 def enviarRespostaNegativaServidor(soquete_cliente, modo, resposta, num_sequencia, janela):
-    retorno = f"{resposta} | NACK{num_sequencia + 1}"
+    retorno = f"{resposta} | NACK{num_sequencia}"
     print(retorno)
-
-    janela["inicio"] += 1
-    janela["final"] += 1
 
     if modo == 'repeticao seletiva':
         soquete_cliente.send(retorno.encode())
@@ -115,10 +112,6 @@ def enviarRespostaFinalServidor(soquete_cliente, num_sequencia, janela, timeout,
         soquete_cliente.sendall(b"ACK" + str(num_sequencia).encode())
     else:
         soquete_cliente.sendall(b"NACK" + str(num_sequencia).encode())
-    
-    #incrementa as informações da janela e retorna para o cliente
-    janela["inicio"] += 1
-    janela["final"] += 1
 
     time.sleep(0.2)
 

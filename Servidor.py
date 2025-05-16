@@ -27,6 +27,7 @@ while True:
     if modo_operacao == 'close':
         break
 
+    print()
     print(f"Modo de operação recebido: {modo_operacao}\n")
 
     #Envia confirmação das configurações para o cliente
@@ -37,6 +38,7 @@ while True:
 
     nack = 0
     timeout = 0
+    fim = 0
 
     while True:
         #Recebe o pacote do cliente
@@ -68,25 +70,29 @@ while True:
             continue
 
         #Break caso seja o fim da mensagem
-        if dados == '$$$':
-            break
+        
 
         if "flag" in pacote:
+            if pacote["flag"] == "$$$":
+                fim = 1
             if pacote["flag"] == "flag_no_ACK":
-                nack = 1
+                if modo_operacao == 'go-back-n':
+                    nack = 1
                 print("Pacote recebido sem enviar o ACK!")
                 if modo_operacao == 'repeticao seletiva':        
                     enviarRespostaNegativaServidor(cliente, modo_operacao, "Pacote recebido sem ACK", num_sequencia_anterior, janela)   
                 continue
             elif pacote["flag"] == "flag_ignore":
-                nack = 1
+                if modo_operacao == 'go-back-n':
+                    nack = 1
                 print ("* Pacote perdido *")
                 if modo_operacao == 'repeticao seletiva':                 
                     enviarRespostaNegativaServidor(cliente, modo_operacao, "Pacote Perdido", num_sequencia_anterior, janela)                  
                 continue
             elif pacote["flag"] == "flag_timeout":
                 timeout = 1
-                nack = 1
+                if modo_operacao == 'go-back-n':
+                    nack = 1
                 if modo_operacao == 'repeticao seletiva':
                     time.sleep(6)
                     enviarRespostaNegativaServidor(cliente, modo_operacao, "Timeout", num_sequencia_anterior, janela)
@@ -97,31 +103,39 @@ while True:
         #Verifica se o pacote está no limite da janela
         if num_sequencia not in intervalo_janela:
             enviarRespostaNegativaServidor(cliente, modo_operacao, "Pacote fora da janela", num_sequencia, janela)
-            nack = 1
+            if modo_operacao == 'go-back-n':
+                nack = 1
             continue
 
         #Verifica se o checksum bate
         if checksum_calculado != int(checksum_recebido):
             enviarRespostaNegativaServidor(cliente, modo_operacao, "Checksum inválido", num_sequencia, janela)
-            nack = 1
+            if modo_operacao == 'go-back-n':
+                nack = 1
             continue
         
         # Verifica se o pacote é duplicado
         if(num_sequencia == num_sequencia_anterior):
             enviarRespostaNegativaServidor(cliente, modo_operacao, "Pacote duplicado", num_sequencia, janela)
-            nack = 1
+            if modo_operacao == 'go-back-n':
+                nack = 1
             continue
 
         else:
             print("Nada de errado com o pacote!")
             pacotes_recebidos.append(dados)
 
-            janela["inicio"] += 1
-            janela["final"] += 1
+            if(nack == 0 and fim == 0):
+                janela["inicio"] += 1
+                janela["final"] += 1
             
         if modo_operacao == 'repeticao seletiva':
             enviarRespostaFinalServidor(cliente, num_sequencia, janela, timeout, nack)
             timeout = 0
+            nack = 0
+
+        if fim == 1:
+            break
 
         num_sequencia_anterior = num_sequencia
 

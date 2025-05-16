@@ -15,6 +15,9 @@ while True:
     #Solicita informações do cliente
     modo_operacao = Client_lib.soliticar_modoOperacao()
 
+    print()
+    tamanho_mensagem = int(input("Digite o tamanho da mensagem do pacote: "))
+
     if modo_operacao == 'close':
         dados_para_servidor = f"{modo_operacao}"
         soquete_cliente.sendall(dados_para_servidor.encode())
@@ -40,7 +43,7 @@ while True:
     mensagem = Client_lib.solicitar_mensagem()
 
     #Divide a mensagem em pacotes e adiciona flag de rajada
-    pacotes = Client_lib.dividir_pacotes(mensagem)
+    pacotes = Client_lib.dividir_pacotes(mensagem, tamanho_mensagem)
 
     pacotes = Client_lib.simularErro(pacotes, opcao)
 
@@ -67,14 +70,16 @@ while True:
             time.sleep(6)
 
         #Caso seja o fim da string, quebra o loop
-        if fim_mensagem == '$$$':
-            break
+
 
         #Recebe resposta do seridor para cada pacote enviado no modo repetição seletiva
         if modo_operacao == 'repeticao seletiva':
             pacoteServidor = Client_lib.receberPacoteServidor(soquete_cliente, opcao)
             if pacoteServidor == "break":
                 continue
+
+        if 'flag' in pacote and pacote['flag'] == '$$$':
+            break
             
         if modo_operacao == 'go-back-n':
             time.sleep(0.2)
