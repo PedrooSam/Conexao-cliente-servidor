@@ -65,25 +65,15 @@ while True:
         #Envia a requisição para o servidor
         soquete_cliente.send(pacote_json.encode())
 
-        if modo_operacao == 'repeticao seletiva' and 'flag' in pacote and pacote['flag'] == 'flag_timeout':
-            #Aguarda o tempo de timeout para simular o atraso
-            time.sleep(6)
-
-        #Caso seja o fim da string, quebra o loop
-
-
         #Recebe resposta do seridor para cada pacote enviado no modo repetição seletiva
         if modo_operacao == 'repeticao seletiva':
             pacoteServidor = Client_lib.receberPacoteServidor(soquete_cliente, opcao)
-            if pacoteServidor == "break":
-                continue
 
+            if pacoteServidor == "break":
+                break
+        
         if 'flag' in pacote and pacote['flag'] == '$$$':
             break
-            
-        if modo_operacao == 'go-back-n':
-            time.sleep(0.2)
-
 
     #Recebe uma única resposta do seridor no modo go back n
     if modo_operacao == 'go-back-n':

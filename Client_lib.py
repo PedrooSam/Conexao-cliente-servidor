@@ -73,6 +73,8 @@ def receberPacoteServidor(soquete_cliente, opcao):
         resposta = receberRespostaServidor(soquete_cliente)
         print('Resposta: ', resposta)
 
+        time.sleep(0.2)
+
         janela = json.loads(receberRespostaServidor(soquete_cliente))
 
         inicio = janela["inicio"]
@@ -83,18 +85,20 @@ def receberPacoteServidor(soquete_cliente, opcao):
         elapsed_time = time.time() - start_time
         soquete_cliente.send(str(elapsed_time).encode())
         print(f"Tempo de resposta: {elapsed_time:.2f} segundos")
-        time.sleep(0.2)
     except socket.timeout:
         timeout_time = time.time() - start_time
-        soquete_cliente.send(str(timeout_time).encode())
+        soquete_cliente.send(str(timeout_time).encode()) 
+
+        time.sleep(0.2)
+
         print("Tempo de espera excedido!")
         print(f"Tempo de espera: {timeout_time:.2f} segundos")
-        time.sleep(1)
         return "break"
 
-def enviarRespostaNegativaServidor(soquete_cliente, modo, resposta, num_sequencia, janela):
+def enviarRespostaNegativaServidor(soquete_cliente, modo, resposta, num_sequencia, janela, timeout = 0):
+    if timeout == 1:
+        time.sleep(5)
     retorno = f"{resposta} | NACK{num_sequencia}"
-    print(retorno)
 
     if modo == 'repeticao seletiva':
         soquete_cliente.send(retorno.encode())
@@ -102,6 +106,7 @@ def enviarRespostaNegativaServidor(soquete_cliente, modo, resposta, num_sequenci
         time.sleep(0.2)
 
         soquete_cliente.send(json.dumps(janela).encode())
+
         elapsed_time = soquete_cliente.recv(1024).decode()
         print(f"Tempo de resposta: {float(elapsed_time):.2f} segundos")
 
@@ -116,7 +121,6 @@ def enviarRespostaFinalServidor(soquete_cliente, num_sequencia, janela, timeout,
     time.sleep(0.2)
 
     soquete_cliente.send(json.dumps(janela).encode())
-
     elapsed_time = soquete_cliente.recv(1024).decode()
     print(f"Tempo de resposta: {float(elapsed_time):.2f} segundos")
 

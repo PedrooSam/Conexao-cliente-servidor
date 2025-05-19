@@ -98,13 +98,9 @@ while True:
                 if modo_operacao == 'go-back-n':
                     nack = 1
                 if modo_operacao == 'repeticao seletiva':
-                    time.sleep(6)
-                    enviarRespostaNegativaServidor(cliente, modo_operacao, "Timeout", num_sequencia, janela)
+                    enviarRespostaNegativaServidor(cliente, modo_operacao, "Timeout", num_sequencia, janela, timeout)
                     timeout = 0
-                if fim == 1:
                     break
-                continue
-
         
         #Verifica se o pacote está no limite da janela
         if num_sequencia not in intervalo_janela:
