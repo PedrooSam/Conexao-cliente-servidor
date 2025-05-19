@@ -66,7 +66,7 @@ while True:
             checksum_calculado = calcular_checksum(dados)
         except ValueError:
             nack = 1
-            enviarRespostaNegativaServidor(cliente, modo_operacao, "Pacote inválido", num_sequencia_anterior, janela)
+            enviarRespostaNegativaServidor(cliente, modo_operacao, "Pacote inválido", num_sequencia, janela)
             continue
 
         #Break caso seja o fim da mensagem
@@ -80,14 +80,18 @@ while True:
                     nack = 1
                 print("Pacote recebido sem enviar o ACK!")
                 if modo_operacao == 'repeticao seletiva':        
-                    enviarRespostaNegativaServidor(cliente, modo_operacao, "Pacote recebido sem ACK", num_sequencia_anterior, janela)   
+                    enviarRespostaNegativaServidor(cliente, modo_operacao, "Pacote recebido sem ACK", num_sequencia, janela)   
+                if fim == 1:
+                    break
                 continue
             elif pacote["flag"] == "flag_ignore":
                 if modo_operacao == 'go-back-n':
                     nack = 1
                 print ("* Pacote perdido *")
                 if modo_operacao == 'repeticao seletiva':                 
-                    enviarRespostaNegativaServidor(cliente, modo_operacao, "Pacote Perdido", num_sequencia_anterior, janela)                  
+                    enviarRespostaNegativaServidor(cliente, modo_operacao, "Pacote Perdido", num_sequencia, janela)       
+                if fim == 1:
+                    break           
                 continue
             elif pacote["flag"] == "flag_timeout":
                 timeout = 1
@@ -95,8 +99,10 @@ while True:
                     nack = 1
                 if modo_operacao == 'repeticao seletiva':
                     time.sleep(6)
-                    enviarRespostaNegativaServidor(cliente, modo_operacao, "Timeout", num_sequencia_anterior, janela)
+                    enviarRespostaNegativaServidor(cliente, modo_operacao, "Timeout", num_sequencia, janela)
                     timeout = 0
+                if fim == 1:
+                    break
                 continue
 
         
@@ -105,6 +111,8 @@ while True:
             enviarRespostaNegativaServidor(cliente, modo_operacao, "Pacote fora da janela", num_sequencia, janela)
             if modo_operacao == 'go-back-n':
                 nack = 1
+            if fim == 1:
+                break
             continue
 
         #Verifica se o checksum bate
@@ -112,6 +120,8 @@ while True:
             enviarRespostaNegativaServidor(cliente, modo_operacao, "Checksum inválido", num_sequencia, janela)
             if modo_operacao == 'go-back-n':
                 nack = 1
+            if fim == 1:
+                break
             continue
         
         # Verifica se o pacote é duplicado
@@ -119,6 +129,8 @@ while True:
             enviarRespostaNegativaServidor(cliente, modo_operacao, "Pacote duplicado", num_sequencia, janela)
             if modo_operacao == 'go-back-n':
                 nack = 1
+            if fim == 1:
+                break
             continue
 
         else:
