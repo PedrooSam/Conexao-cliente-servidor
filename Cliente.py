@@ -15,13 +15,13 @@ while True:
     #Solicita informações do cliente
     modo_operacao = Client_lib.soliticar_modoOperacao()
 
-    print()
-    tamanho_mensagem = int(input("Digite o tamanho da mensagem do pacote: "))
-
     if modo_operacao == 'close':
         dados_para_servidor = f"{modo_operacao}"
         soquete_cliente.sendall(dados_para_servidor.encode())
         break
+
+    print()
+    tamanho_mensagem = int(input("Digite o tamanho da mensagem do pacote: "))
     
     while True:
         print()

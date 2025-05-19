@@ -149,7 +149,9 @@ while True:
 
     #Junta os pacotes válidos recebidos
     mensagem = "".join(pacotes_recebidos)
-    print("Mensagem final reconstruída:", mensagem)
+
+    if mensagem != '':
+        print("Mensagem final reconstruída:", mensagem)
 
     #Envia um ACK (final para repetição seletiva ou único se for go-back-n)
     if modo_operacao == 'go-back-n':
