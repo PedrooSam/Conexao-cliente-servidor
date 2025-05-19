@@ -69,9 +69,6 @@ while True:
             enviarRespostaNegativaServidor(cliente, modo_operacao, "Pacote inválido", num_sequencia, janela)
             continue
 
-        #Break caso seja o fim da mensagem
-        
-
         if "flag" in pacote:
             if pacote["flag"] == "$$$":
                 fim = 1
@@ -101,6 +98,9 @@ while True:
                     enviarRespostaNegativaServidor(cliente, modo_operacao, "Timeout", num_sequencia, janela, timeout)
                     timeout = 0
                     break
+                if fim == 1:
+                    break
+                continue
         
         #Verifica se o pacote está no limite da janela
         if num_sequencia not in intervalo_janela:

@@ -75,6 +75,10 @@ while True:
         if 'flag' in pacote and pacote['flag'] == '$$$':
             break
 
+        if modo_operacao == 'go-back-n':
+            #Envia resposta final do servidor
+            time.sleep(0.2)
+
     #Recebe uma única resposta do seridor no modo go back n
     if modo_operacao == 'go-back-n':
         pacoteServidor = Client_lib.receberPacoteServidor(soquete_cliente, opcao)
